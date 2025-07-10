@@ -1,43 +1,46 @@
 import os
 import streamlit as st
 import pickle
-
 from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.document_loaders import UnstructuredURLLoader, TextLoader, PyPDFLoader
+from langchain.document_loaders import (
+    UnstructuredURLLoader,
+    TextLoader,
+    PyPDFLoader
+)
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 
-# Load API key from Streamlit secrets or .env
+# Load API key from Streamlit secrets or .env (for local testing)
 if "OPENAI_API_KEY" in st.secrets:
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 else:
     load_dotenv()
 
-st.set_page_config(page_title="EduBot: Academic Paper Research", page_icon="📚", layout="wide")
+st.set_page_config(page_title="EduBot: Academic Research Assistant 📚", page_icon="📚", layout="wide")
 
-# Premium UI Styling
 st.markdown("""
     <style>
     .stApp {background: linear-gradient(to right, #141e30, #243b55); color: #ffffff;}
-    .title {font-size: 2.8em; font-weight: bold; text-align: center; margin-bottom: 5px; color: #00c6ff;}
-    .subtitle {font-size: 1.1em; text-align: center; color: #eeeeee; margin-bottom: 30px;}
-    .stButton > button {background-color: #00c6ff; color: #000000; border-radius: 8px; padding: 0.6em 1.4em; font-weight: bold; border: none;}
+    .title {font-size: 2.8em; font-weight: bold; text-align: center; color: #00c6ff;}
+    .subtitle {font-size: 1.2em; text-align: center; color: #eeeeee;}
+    .stButton > button {background-color: #00c6ff; color: #000; border-radius: 8px; padding: 0.6em 1.4em; font-weight: bold;}
     .stButton > button:hover {background-color: #7df9ff;}
-    .footer {position: relative; text-align: center; font-size: 0.9em; margin-top: 50px; color: #bbbbbb;}
+    .footer {text-align: center; color: #bbbbbb; margin-top: 30px;}
     </style>
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="title">EduBot: Academic Research Assistant 📚</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Summarize & Query Research Papers Instantly</div>', unsafe_allow_html=True)
 
-# Sidebar for URLs and file upload
+# Sidebar Inputs
 with st.sidebar:
-    st.subheader("📑 Enter Research Paper URLs")
+    st.subheader("📑 Enter Research Paper URLs (Static Pages Only!)")
     urls = [st.text_input(f"🔗 Paper URL {i+1}") for i in range(3)]
     process_url_clicked = st.button("🚀 Process Papers from URLs")
+    
     st.markdown("---")
     st.subheader("📂 Or Upload PDF/Text Files")
     uploaded_files = st.file_uploader("Upload Files", type=["pdf", "txt"], accept_multiple_files=True)
@@ -49,33 +52,29 @@ llm = ChatOpenAI(temperature=0.2, max_tokens=1500, model_name="gpt-3.5-turbo")
 
 # Process URLs
 if process_url_clicked:
-    try:
-        with st.spinner("Fetching and processing papers from URLs..."):
-            loader = UnstructuredURLLoader(urls=urls)
-            data = loader.load()
-            if not data or all(not d.page_content.strip() for d in data):
-                st.error("❌ No valid text found from the URLs. Check links or try file upload.")
-                st.stop()
-            
-            progress_placeholder.progress(33, "Loaded Papers ✅")
-            text_splitter = RecursiveCharacterTextSplitter(separators=['\n\n', '\n', '.', ','], chunk_size=3000)
-            docs = text_splitter.split_documents(data)
-            if not docs:
-                st.error("❌ No text chunks were created from the papers.")
-                st.stop()
-            
-            progress_placeholder.progress(66, "Split Text ✅")
-            embeddings = OpenAIEmbeddings()
-            vectorstore = FAISS.from_documents(docs, embeddings)
-            progress_placeholder.progress(100, "Vectorstore Built ✅")
+    with st.spinner("Processing URLs..."):
+        loader = UnstructuredURLLoader(urls=urls)
+        data = loader.load()
+        if not data or all(not d.page_content.strip() for d in data):
+            st.error("❌ No valid text found from the URLs. Blogs and dynamic sites may not work. Try Wikipedia, arXiv, etc., or upload files instead.")
+            st.stop()
+        
+        progress_placeholder.progress(33, "Loaded Papers ✅")
+        text_splitter = RecursiveCharacterTextSplitter(separators=['\n\n', '\n', '.', ','], chunk_size=3000)
+        docs = text_splitter.split_documents(data)
+        if not docs:
+            st.error("❌ No text chunks were created from the papers.")
+            st.stop()
 
-            with open(file_path, "wb") as f:
-                pickle.dump(vectorstore, f)
+        progress_placeholder.progress(66, "Split Text ✅")
+        embeddings = OpenAIEmbeddings()
+        vectorstore = FAISS.from_documents(docs, embeddings)
+        progress_placeholder.progress(100, "Vectorstore Built ✅")
 
-            st.success("✅ Papers Processed Successfully from URLs!")
+        with open(file_path, "wb") as f:
+            pickle.dump(vectorstore, f)
 
-    except Exception as e:
-        st.error(f"❌ Error while processing URLs: {e}")
+        st.success("✅ Papers Processed Successfully from URLs!")
 
 # Process Uploaded Files
 if process_file_clicked:
@@ -89,14 +88,16 @@ if process_file_clicked:
             file_name = uploaded_file.name
             if file_name.endswith(".txt"):
                 text = uploaded_file.read().decode("utf-8")
-                all_docs.append(TextLoader(file_name).load(text))
+                docs = [Document(page_content=text, metadata={"source": file_name})]
             elif file_name.endswith(".pdf"):
                 with open(file_name, "wb") as f:
                     f.write(uploaded_file.read())
                 loader = PyPDFLoader(file_name)
                 docs = loader.load()
                 os.remove(file_name)
-                all_docs.extend(docs)
+            else:
+                continue
+            all_docs.extend(docs)
 
         if not all_docs:
             st.error("❌ Failed to process any uploaded files.")
