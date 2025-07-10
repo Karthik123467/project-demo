@@ -1,7 +1,6 @@
 import os
 import streamlit as st
 import pickle
-import tempfile
 
 from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
@@ -11,7 +10,7 @@ from langchain.document_loaders import UnstructuredURLLoader, TextLoader, PyPDFL
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 
-# Load API key from secrets or .env
+# Load API key from Streamlit secrets or .env
 if "OPENAI_API_KEY" in st.secrets:
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 else:
@@ -19,7 +18,7 @@ else:
 
 st.set_page_config(page_title="EduBot: Academic Paper Research", page_icon="📚", layout="wide")
 
-# Custom CSS
+# Premium UI Styling
 st.markdown("""
     <style>
     .stApp {background: linear-gradient(to right, #141e30, #243b55); color: #ffffff;}
@@ -31,11 +30,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Title & Subtitle
 st.markdown('<div class="title">EduBot: Academic Research Assistant 📚</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Summarize & Query Research Papers Instantly</div>', unsafe_allow_html=True)
 
-# Sidebar for URLs and File Upload
+# Sidebar for URLs and file upload
 with st.sidebar:
     st.subheader("📑 Enter Research Paper URLs")
     urls = [st.text_input(f"🔗 Paper URL {i+1}") for i in range(3)]
@@ -49,33 +47,37 @@ file_path = "edu_faiss_store.pkl"
 progress_placeholder = st.empty()
 llm = ChatOpenAI(temperature=0.2, max_tokens=1500, model_name="gpt-3.5-turbo")
 
-# URL Processing
+# Process URLs
 if process_url_clicked:
-    with st.spinner("Fetching and processing papers from URLs..."):
-        loader = UnstructuredURLLoader(urls=urls)
-        data = loader.load()
-        if not data or all(not d.page_content.strip() for d in data):
-            st.error("❌ No valid text found from the URLs. Check links or try file upload.")
-            st.stop()
+    try:
+        with st.spinner("Fetching and processing papers from URLs..."):
+            loader = UnstructuredURLLoader(urls=urls)
+            data = loader.load()
+            if not data or all(not d.page_content.strip() for d in data):
+                st.error("❌ No valid text found from the URLs. Check links or try file upload.")
+                st.stop()
+            
+            progress_placeholder.progress(33, "Loaded Papers ✅")
+            text_splitter = RecursiveCharacterTextSplitter(separators=['\n\n', '\n', '.', ','], chunk_size=3000)
+            docs = text_splitter.split_documents(data)
+            if not docs:
+                st.error("❌ No text chunks were created from the papers.")
+                st.stop()
+            
+            progress_placeholder.progress(66, "Split Text ✅")
+            embeddings = OpenAIEmbeddings()
+            vectorstore = FAISS.from_documents(docs, embeddings)
+            progress_placeholder.progress(100, "Vectorstore Built ✅")
 
-        progress_placeholder.progress(33, "Loaded Papers ✅")
-        text_splitter = RecursiveCharacterTextSplitter(separators=['\n\n', '\n', '.', ','], chunk_size=3000)
-        docs = text_splitter.split_documents(data)
-        if not docs:
-            st.error("❌ No text chunks were created from the papers.")
-            st.stop()
+            with open(file_path, "wb") as f:
+                pickle.dump(vectorstore, f)
 
-        progress_placeholder.progress(66, "Split Text ✅")
-        embeddings = OpenAIEmbeddings()
-        vectorstore = FAISS.from_documents(docs, embeddings)
-        progress_placeholder.progress(100, "Vectorstore Built ✅")
+            st.success("✅ Papers Processed Successfully from URLs!")
 
-        with open(file_path, "wb") as f:
-            pickle.dump(vectorstore, f)
+    except Exception as e:
+        st.error(f"❌ Error while processing URLs: {e}")
 
-        st.success("✅ Papers Processed Successfully from URLs!")
-
-# File Upload Processing
+# Process Uploaded Files
 if process_file_clicked:
     if not uploaded_files:
         st.error("❌ Please upload at least one file.")
@@ -85,22 +87,16 @@ if process_file_clicked:
     with st.spinner("Processing uploaded files..."):
         for uploaded_file in uploaded_files:
             file_name = uploaded_file.name
-            # Save file temporarily
-            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file_name)[-1]) as tmp_file:
-                tmp_file.write(uploaded_file.read())
-                tmp_file_path = tmp_file.name
-
             if file_name.endswith(".txt"):
-                loader = TextLoader(tmp_file_path)
+                text = uploaded_file.read().decode("utf-8")
+                all_docs.append(TextLoader(file_name).load(text))
             elif file_name.endswith(".pdf"):
-                loader = PyPDFLoader(tmp_file_path)
-            else:
-                os.remove(tmp_file_path)
-                continue
-
-            docs = loader.load()
-            os.remove(tmp_file_path)
-            all_docs.extend(docs)
+                with open(file_name, "wb") as f:
+                    f.write(uploaded_file.read())
+                loader = PyPDFLoader(file_name)
+                docs = loader.load()
+                os.remove(file_name)
+                all_docs.extend(docs)
 
         if not all_docs:
             st.error("❌ Failed to process any uploaded files.")
