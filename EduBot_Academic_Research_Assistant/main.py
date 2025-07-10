@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 import pickle
+import tempfile
 
 from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
@@ -48,7 +49,6 @@ file_path = "edu_faiss_store.pkl"
 progress_placeholder = st.empty()
 llm = ChatOpenAI(temperature=0.2, max_tokens=1500, model_name="gpt-3.5-turbo")
 
-
 # URL Processing
 if process_url_clicked:
     with st.spinner("Fetching and processing papers from URLs..."):
@@ -59,7 +59,6 @@ if process_url_clicked:
             st.stop()
 
         progress_placeholder.progress(33, "Loaded Papers ✅")
-
         text_splitter = RecursiveCharacterTextSplitter(separators=['\n\n', '\n', '.', ','], chunk_size=3000)
         docs = text_splitter.split_documents(data)
         if not docs:
@@ -86,18 +85,21 @@ if process_file_clicked:
     with st.spinner("Processing uploaded files..."):
         for uploaded_file in uploaded_files:
             file_name = uploaded_file.name
+            # Save file temporarily
+            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file_name)[-1]) as tmp_file:
+                tmp_file.write(uploaded_file.read())
+                tmp_file_path = tmp_file.name
+
             if file_name.endswith(".txt"):
-                text = uploaded_file.read().decode("utf-8")
-                loader = TextLoader(file_name)
-                docs = [loader.load(text)]
+                loader = TextLoader(tmp_file_path)
             elif file_name.endswith(".pdf"):
-                with open(file_name, "wb") as f:
-                    f.write(uploaded_file.read())
-                loader = PyPDFLoader(file_name)
-                docs = loader.load()
-                os.remove(file_name)
+                loader = PyPDFLoader(tmp_file_path)
             else:
+                os.remove(tmp_file_path)
                 continue
+
+            docs = loader.load()
+            os.remove(tmp_file_path)
             all_docs.extend(docs)
 
         if not all_docs:
