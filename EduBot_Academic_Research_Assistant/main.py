@@ -5,15 +5,12 @@ from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.document_loaders import (
-    UnstructuredURLLoader,
-    TextLoader,
-    PyPDFLoader
-)
+from langchain.document_loaders import PyPDFLoader
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
+from langchain.schema import Document
 
-# Load API key from Streamlit secrets or .env (for local testing)
+# Load API key from Streamlit secrets or .env
 if "OPENAI_API_KEY" in st.secrets:
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 else:
@@ -35,46 +32,15 @@ st.markdown("""
 st.markdown('<div class="title">EduBot: Academic Research Assistant 📚</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Summarize & Query Research Papers Instantly</div>', unsafe_allow_html=True)
 
-# Sidebar Inputs
+# Sidebar for file upload
 with st.sidebar:
-    st.subheader("📑 Enter Research Paper URLs (Static Pages Only!)")
-    urls = [st.text_input(f"🔗 Paper URL {i+1}") for i in range(3)]
-    process_url_clicked = st.button("🚀 Process Papers from URLs")
-    
-    st.markdown("---")
-    st.subheader("📂 Or Upload PDF/Text Files")
+    st.subheader("📂 Upload PDF/Text Files")
     uploaded_files = st.file_uploader("Upload Files", type=["pdf", "txt"], accept_multiple_files=True)
     process_file_clicked = st.button("🚀 Process Uploaded Files")
 
 file_path = "edu_faiss_store.pkl"
 progress_placeholder = st.empty()
 llm = ChatOpenAI(temperature=0.2, max_tokens=1500, model_name="gpt-3.5-turbo")
-
-# Process URLs
-if process_url_clicked:
-    with st.spinner("Processing URLs..."):
-        loader = UnstructuredURLLoader(urls=urls)
-        data = loader.load()
-        if not data or all(not d.page_content.strip() for d in data):
-            st.error("❌ No valid text found from the URLs. Blogs and dynamic sites may not work. Try Wikipedia, arXiv, etc., or upload files instead.")
-            st.stop()
-        
-        progress_placeholder.progress(33, "Loaded Papers ✅")
-        text_splitter = RecursiveCharacterTextSplitter(separators=['\n\n', '\n', '.', ','], chunk_size=3000)
-        docs = text_splitter.split_documents(data)
-        if not docs:
-            st.error("❌ No text chunks were created from the papers.")
-            st.stop()
-
-        progress_placeholder.progress(66, "Split Text ✅")
-        embeddings = OpenAIEmbeddings()
-        vectorstore = FAISS.from_documents(docs, embeddings)
-        progress_placeholder.progress(100, "Vectorstore Built ✅")
-
-        with open(file_path, "wb") as f:
-            pickle.dump(vectorstore, f)
-
-        st.success("✅ Papers Processed Successfully from URLs!")
 
 # Process Uploaded Files
 if process_file_clicked:
