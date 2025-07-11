@@ -76,12 +76,16 @@ Here's the visual workflow of how the app functions:
 ## 📂 File Structure
 
 ```
-.
-├── main.py                # Streamlit app code
-├── requirements.txt       # Required Python packages
-├── .env.example           # Example env file for API key
-├── README.md              # Project documentation
-├── ChatGPT Image...png    # Visual workflow image
+EduBot_Academic_Research_Assistant/
+│
+├── main.py
+├── requirements.txt
+├── democodepython/
+├── vector_index.pkl
+│
+README.md
+workflow.png
+
 ```
 
 ---
