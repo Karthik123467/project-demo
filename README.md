@@ -3,7 +3,7 @@
 
 EduBot is a powerful Streamlit-based application designed to help researchers, students, and professionals easily **upload**, **fetch**, **summarize**, and **query** academic research papers using **LangChain**, **FAISS**, and **OpenAI's LLM**.
 
-![Workflow](./ChatGPT%20Image%20Jul%2011,%202025,%2012_25_57%20AM.png)
+![Workflow](./workflow.png)
 
 ---
 
@@ -69,7 +69,7 @@ The app will launch in your browser.
 
 Here's the visual workflow of how the app functions:
 
-![App Flow Screenshot](./ChatGPT%20Image%20Jul%2011,%202025,%2012_25_57%20AM.png)
+![App Flow Screenshot](./workflow.png)
 
 ---
 
