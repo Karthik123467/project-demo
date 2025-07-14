@@ -11,6 +11,24 @@ from langchain.vectorstores import FAISS
 from langchain.schema import Document
 import io
 
+# Load API key from Streamlit secrets or .env
+if "OPENAI_API_KEY" in st.secrets:
+    os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+else:
+    load_dotenv()
+
+st.set_page_config(page_title="EduBot: Academic Research Assistant 📚", page_icon="📚", layout="wide")
+
+st.markdown("""
+    <style>
+    .stApp {background: linear-gradient(to right, #141e30, #243b55); color: #ffffff;}
+    .title {font-size: 2.8em; font-weight: bold; text-align: center; color: #00c6ff;}
+    .subtitle {font-size: 1.2em; text-align: center; color: #eeeeee;}
+    .stButton > button {background-color: #00c6ff; color: #000; border-radius: 8px; padding: 0.6em 1.4em; font-weight: bold;}
+    .stButton > button:hover {background-color: #7df9ff;}
+    .footer {text-align: center; color: #bbbbbb; margin-top: 30px;}
+    </style>
+""", unsafe_allow_html=True)
 # Demo file content
 demo_text = """Suggested Questions for EduBot:
 
@@ -37,25 +55,6 @@ st.sidebar.download_button(
     file_name="Suggested_Questions_Demo.txt",
     mime="text/plain"
 )
-
-# Load API key from Streamlit secrets or .env
-if "OPENAI_API_KEY" in st.secrets:
-    os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-else:
-    load_dotenv()
-
-st.set_page_config(page_title="EduBot: Academic Research Assistant 📚", page_icon="📚", layout="wide")
-
-st.markdown("""
-    <style>
-    .stApp {background: linear-gradient(to right, #141e30, #243b55); color: #ffffff;}
-    .title {font-size: 2.8em; font-weight: bold; text-align: center; color: #00c6ff;}
-    .subtitle {font-size: 1.2em; text-align: center; color: #eeeeee;}
-    .stButton > button {background-color: #00c6ff; color: #000; border-radius: 8px; padding: 0.6em 1.4em; font-weight: bold;}
-    .stButton > button:hover {background-color: #7df9ff;}
-    .footer {text-align: center; color: #bbbbbb; margin-top: 30px;}
-    </style>
-""", unsafe_allow_html=True)
 
 st.markdown('<div class="title">EduBot: Academic Research Assistant 📚</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Summarize & Query Research Papers Instantly</div>', unsafe_allow_html=True)
