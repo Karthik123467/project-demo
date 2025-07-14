@@ -9,6 +9,34 @@ from langchain.document_loaders import PyPDFLoader
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.schema import Document
+import io
+
+# Demo file content
+demo_text = """Suggested Questions for EduBot:
+
+1. What is the main research question addressed in this paper?
+2. Can you summarize the key findings of this study?
+3. What methods or models were used for analysis?
+4. How does this research contribute to the existing body of knowledge?
+5. What are the strengths and limitations of the proposed approach?
+6. Are there any assumptions or biases noted by the authors?
+7. What future work or open problems are identified?
+8. Can you explain the significance of the results in simple terms?
+9. How does this paper compare to other studies in the same domain?
+10. What datasets or experiments were used, and are they reproducible?
+
+Tips:
+✔ Upload technical papers, literature reviews, or PDFs with multiple sections.
+✔ Try asking questions based on figures, tables, or conclusions.
+"""
+
+# Downloadable demo file
+st.sidebar.download_button(
+    label="📄 Download Demo Question File",
+    data=demo_text,
+    file_name="Suggested_Questions_Demo.txt",
+    mime="text/plain"
+)
 
 # Load API key from Streamlit secrets or .env
 if "OPENAI_API_KEY" in st.secrets:
