@@ -42,6 +42,7 @@ demo_text = """Suggested Questions for EduBot:
 8. Can you explain the significance of the results in simple terms?
 9. How does this paper compare to other studies in the same domain?
 10. What datasets or experiments were used, and are they reproducible?
+11.Create mcqs based on the Topic_name
 
 Tips:
 ✔ Upload technical papers, literature reviews, or PDFs with multiple sections.
