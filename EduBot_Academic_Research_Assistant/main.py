@@ -46,6 +46,12 @@ Tips:
 ✔ Upload technical papers, literature reviews, or PDFs with multiple sections.
 ✔ Try asking questions based on figures, tables, or conclusions.
 """
+st.sidebar.download_button(
+    label="📄 Download Demo Question File",
+    data=demo_text,
+    file_name="Suggested_Questions_Demo.txt",
+    mime="text/plain"
+)
 st.markdown("""
     <style>
     .stApp {background: linear-gradient(to right, #141e30, #243b55); color: #ffffff;}
